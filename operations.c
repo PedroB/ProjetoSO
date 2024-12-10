@@ -25,12 +25,12 @@ typedef struct {
     int backup_count;
 } JobBackup;
 
-typedef struct{
-  char key[MAX_JOB_FILE_NAME_SIZE];
-  char value[MAX_JOB_FILE_NAME_SIZE];
-  pthread_rwlock_t lock;
+// typedef struct{
+//   char key[MAX_JOB_FILE_NAME_SIZE];
+//   char value[MAX_JOB_FILE_NAME_SIZE];
+//   pthread_rwlock_t lock;
   
-}Node;
+// }Node;
 
 
 
@@ -79,7 +79,6 @@ int mywrite(int fd, char *buffer) {
 
 
 int kvs_init() {
-  pthread_rwlock_init(&kvs_table,NULL);
   if (kvs_table != NULL) {
     fprintf(stderr, "KVS state has already been initialized\n");
     return 1;
@@ -99,19 +98,64 @@ int kvs_terminate() {
   return 0;
 }
 
+char **order_keys(size_t num_pairs, char **keys, char **values) {
+  size_t swapped;
+  do {
+    swapped = 0;
+    for (size_t i = 0; i < num_pairs - 1; i++) {
+      if (strcmp(keys[i], keys[i + 1]) > 0) {
+        // Swap keys
+        char *temp_key = keys[i];
+        keys[i] = keys[i + 1];
+        keys[i + 1] = temp_key;
+
+        // Swap corresponding values
+        char *temp_value = values[i];
+        values[i] = values[i + 1];
+        values[i + 1] = temp_value;
+
+        swapped = 1;
+      }
+    }
+  } while (swapped);
+
+  return keys; // Return sorted keys (optional)
+}
+
+void unlock_keys(size_t num_pairs, char **keys) {
+  for (int i = 0; i < TABLE_SIZE; i++) {
+    KeyNode *keyNode = kvs_table->table[i];
+    while (keyNode != NULL) {
+      for (size_t j = 0; j < num_pairs; j++) {
+        if (strcmp(keyNode->key, keys[j]) == 0) { // Compare strings correctly
+          pthread_rwlock_unlock(&keyNode->lock); // Unlock the correct lock
+        }
+      }
+      keyNode = keyNode->next; // Move to the next node
+    }
+  }
+}
+
+
 int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_STRING_SIZE]) {
   if (kvs_table == NULL) {
     fprintf(stderr, "KVS state must be initialized\n");
     return 1;
   }
 
+  order_keys(num_pairs,&keys,&values);
 
-//aasaasssacsa
   for (size_t i = 0; i < num_pairs; i++) {
+
+//lock
+
     if (write_pair(kvs_table, keys[i], values[i]) != 0) {
       fprintf(stderr, "Failed to write keypair (%s,%s)\n", keys[i], values[i]);
     }
   }
+
+  unlock_keys(num_pairs,keys);
+  
 
   return 0;
 }
@@ -121,6 +165,12 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
     fprintf(stderr, "KVS state must be initialized\n");
     return 1;
   }
+
+  char values[MAX_STRING_SIZE][MAX_STRING_SIZE] = {};
+
+  order_keys(num_pairs,&keys,&values);
+
+  
   char buffer[MAX_PIPE];                          
 
   
@@ -146,6 +196,10 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
     //  mywrite(fd,"]\n");
   sprintf(buffer,"]\n");     
   mywrite(fd, buffer);
+
+
+ unlock_keys(num_pairs,keys);
+
     
 
   return 0;
@@ -156,6 +210,10 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
     fprintf(stderr, "KVS state must be initialized\n");
     return 1;
   }
+
+  char *values = NULL;
+  order_keys(num_pairs,&keys,&values);
+
   int aux = 0;
 
   char buffer[MAX_PIPE];
@@ -181,32 +239,36 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   }
 
+  unlock_keys(num_pairs,keys);
+
   return 0;
 }
 
 void kvs_show(int fd) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
+    pthread_rwlock_rdlock(&keyNode->lock);
     while (keyNode != NULL) {
 
       char buffer[MAX_PIPE];                          
       sprintf(buffer,  "(%s, %s)\n", keyNode->key, keyNode->value);          
       write(fd, buffer, strlen(buffer));
 
-
-
-      // printf("(%s, %s)\n", keyNode->key, keyNode->value);
-
-
-      //mywrite(...) que aloca buffer (length da key + length fo value + os ()\n) e coloca neste formato no buffer
-      // e depois faz write(fd, buffer, size) para o file com o file descriptor fd
-      // sprintf(buffer, "Sum of %d and %d is %d", a, b, c);
-
-    // mywrite(fd, "(%s, %s)\n", keyNode->key, keyNode->value);
       keyNode = keyNode->next; // Move to the next node
     }
   }
-}
+
+  for (int i = 0; i < TABLE_SIZE; i++) {
+    KeyNode *keyNode = kvs_table->table[i];
+    while (keyNode != NULL) {
+        pthread_rwlock_unlock(&keyNode->lock);
+
+    }
+      keyNode = keyNode->next; // Move to the next node
+    }
+
+  }
+
 
 /// Waits for the last backup to be called.
 void kvs_wait_backup() {
