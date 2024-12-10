@@ -79,6 +79,7 @@ int mywrite(int fd, char *buffer) {
 
 
 int kvs_init() {
+  pthread_rwlock_init(&kvs_table,NULL);
   if (kvs_table != NULL) {
     fprintf(stderr, "KVS state has already been initialized\n");
     return 1;
