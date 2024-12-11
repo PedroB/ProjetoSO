@@ -286,7 +286,7 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   }
 
-  unlock_keys(num_pairs,keys);
+  // unlock_keys(num_pairs,keys);
 
   return 0;
 }

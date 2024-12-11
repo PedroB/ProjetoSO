@@ -25,19 +25,42 @@ struct HashTable* create_hash_table() {
   for (int i = 0; i < TABLE_SIZE; i++) {
       ht->table[i] = NULL;
   }
+
+
+    // Initialize each KeyNode with a lock
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        ht->table[i] = malloc(sizeof(KeyNode));
+        if (!ht->table[i]) {
+            return NULL; // Memory allocation failure
+        }
+        ht->table[i]->key = NULL; // Initialize key and value pointers to NULL
+        ht->table[i]->value = NULL;
+        ht->table[i]->next = NULL;
+        pthread_rwlock_init(&ht->table[i]->lock, NULL); // Initialize the lock
+    }
+
+
   return ht;
 }
 
 int write_pair(HashTable *ht, const char *key, const char *value) {
     int index = hash(key);
     KeyNode *keyNode = ht->table[index];
+    
 
-    pthread_rwlock_wrlock(&keyNode->lock);
+    // Lock the keyNode at this index only if it's valid
+    if (keyNode != NULL) {
+        pthread_rwlock_wrlock(&keyNode->lock); // Lock the node if it exists
+    }
+
+    // pthread_rwlock_wrlock(&keyNode->lock);
     // Search for the key node
     while (keyNode != NULL) {
+
+
         if (strcmp(keyNode->key, key) == 0) {
             free(keyNode->value);
-            
+
             keyNode->value = strdup(value);
             return 0;
         }
@@ -50,6 +73,10 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
     keyNode->key = strdup(key); // Allocate memory for the key
     keyNode->value = strdup(value); // Allocate memory for the value
     keyNode->next = ht->table[index]; // Link to existing nodes
+
+
+    pthread_rwlock_init(&keyNode->lock, NULL); // Initialize the lock
+
     ht->table[index] = keyNode; // Place new key node at the start of the list
 
     
@@ -93,13 +120,17 @@ int delete_pair(HashTable *ht, const char *key) {
             // Free the memory allocated for the key and value
             free(keyNode->key);
             free(keyNode->value);
+            pthread_rwlock_unlock(&keyNode->lock);
+            pthread_rwlock_destroy(&keyNode->lock);
             free(keyNode); // Free the key node itself
-            
+
             return 0; // Exit the function
         }
         prevNode = keyNode; // Move prevNode to current node
         keyNode = keyNode->next; // Move to the next node
     }
+    pthread_rwlock_unlock(&keyNode->lock);
+
     
     return 1;
 }
