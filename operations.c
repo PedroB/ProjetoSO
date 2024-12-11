@@ -98,31 +98,59 @@ int kvs_terminate() {
   return 0;
 }
 
-char **order_keys(size_t num_pairs, char **keys, char **values) {
+
+void order_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_STRING_SIZE]) {
   size_t swapped;
   do {
     swapped = 0;
     for (size_t i = 0; i < num_pairs - 1; i++) {
       if (strcmp(keys[i], keys[i + 1]) > 0) {
         // Swap keys
-        char *temp_key = keys[i];
-        keys[i] = keys[i + 1];
-        keys[i + 1] = temp_key;
+        char temp_key[MAX_STRING_SIZE];
+        strcpy(temp_key, keys[i]);
+        strcpy(keys[i], keys[i + 1]);
+        strcpy(keys[i + 1], temp_key);
 
         // Swap corresponding values
-        char *temp_value = values[i];
-        values[i] = values[i + 1];
-        values[i + 1] = temp_value;
+        char temp_value[MAX_STRING_SIZE];
+        strcpy(temp_value, values[i]);
+        strcpy(values[i], values[i + 1]);
+        strcpy(values[i + 1], temp_value);
 
         swapped = 1;
       }
     }
   } while (swapped);
-
-  return keys; // Return sorted keys (optional)
 }
 
-void unlock_keys(size_t num_pairs, char **keys) {
+
+
+// char **order_keys(size_t num_pairs, char **keys, char **values) {
+//   size_t swapped;
+//   do {
+//     swapped = 0;
+//     for (size_t i = 0; i < num_pairs - 1; i++) {
+//       if (strcmp(keys[i], keys[i + 1]) > 0) {
+//         // Swap keys
+//         char *temp_key = keys[i];
+//         keys[i] = keys[i + 1];
+//         keys[i + 1] = temp_key;
+
+//         // Swap corresponding values
+//         char *temp_value = values[i];
+//         values[i] = values[i + 1];
+//         values[i + 1] = temp_value;
+
+//         swapped = 1;
+//       }
+//     }
+//   } while (swapped);
+
+//   return keys; // Return sorted keys (optional)
+// }
+
+
+void unlock_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
     while (keyNode != NULL) {
@@ -136,6 +164,20 @@ void unlock_keys(size_t num_pairs, char **keys) {
   }
 }
 
+// void unlock_keys(size_t num_pairs, char **keys) {
+//   for (int i = 0; i < TABLE_SIZE; i++) {
+//     KeyNode *keyNode = kvs_table->table[i];
+//     while (keyNode != NULL) {
+//       for (size_t j = 0; j < num_pairs; j++) {
+//         if (strcmp(keyNode->key, keys[j]) == 0) { // Compare strings correctly
+//           pthread_rwlock_unlock(&keyNode->lock); // Unlock the correct lock
+//         }
+//       }
+//       keyNode = keyNode->next; // Move to the next node
+//     }
+//   }
+// }
+
 
 int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_STRING_SIZE]) {
   if (kvs_table == NULL) {
@@ -143,7 +185,7 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
     return 1;
   }
 
-  order_keys(num_pairs,&keys,&values);
+  order_keys(num_pairs,keys,values);
 
   for (size_t i = 0; i < num_pairs; i++) {
 
@@ -155,6 +197,7 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
   }
 
   unlock_keys(num_pairs,keys);
+  
   
 
   return 0;
@@ -168,7 +211,7 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   char values[MAX_STRING_SIZE][MAX_STRING_SIZE] = {};
 
-  order_keys(num_pairs,&keys,&values);
+  order_keys(num_pairs,keys,values);
 
   
   char buffer[MAX_PIPE];                          
@@ -211,8 +254,12 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
     return 1;
   }
 
-  char *values = NULL;
-  order_keys(num_pairs,&keys,&values);
+  // char *values = NULL;
+  // order_keys(num_pairs,keys,values);
+
+  char values[MAX_STRING_SIZE][MAX_STRING_SIZE] = {};
+  order_keys(num_pairs, keys, values);
+
 
   int aux = 0;
 

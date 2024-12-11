@@ -32,11 +32,12 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
     int index = hash(key);
     KeyNode *keyNode = ht->table[index];
 
-    pthread_rwlock_wrlock(&keyNode);
+    pthread_rwlock_wrlock(&keyNode->lock);
     // Search for the key node
     while (keyNode != NULL) {
         if (strcmp(keyNode->key, key) == 0) {
             free(keyNode->value);
+            
             keyNode->value = strdup(value);
             return 0;
         }
@@ -60,7 +61,7 @@ char* read_pair(HashTable *ht, const char *key) {
     KeyNode *keyNode = ht->table[index];
     char* value;
 
-    pthread_rwlock_rdlock(&keyNode);
+    pthread_rwlock_rdlock(&keyNode->lock);
     while (keyNode != NULL) {
         if (strcmp(keyNode->key, key) == 0) {
             value = strdup(keyNode->value);
@@ -76,7 +77,7 @@ int delete_pair(HashTable *ht, const char *key) {
     KeyNode *keyNode = ht->table[index];
     KeyNode *prevNode = NULL;
 
-    pthread_rwlock_wrlock(&keyNode);
+    pthread_rwlock_wrlock(&keyNode->lock);
 
     // Search for the key node
     while (keyNode != NULL) {

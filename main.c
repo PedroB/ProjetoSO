@@ -23,7 +23,9 @@ struct ThreadArgs {
 typedef struct {
     char in_path[MAX_JOB_FILE_NAME_SIZE];
     char out_path[MAX_JOB_FILE_NAME_SIZE];
-    DIR dir[MAX_JOB_FILE_NAME_SIZE];
+    // DIR *dir[MAX_JOB_FILE_NAME_SIZE];
+   DIR *dir;
+
     char dir_name[MAX_JOB_FILE_NAME_SIZE];
     
   
@@ -299,6 +301,8 @@ void *processFiles(void *arg) {
         readFilesLines(fd_in, fd_out, dir_name, entry, in_path, out_path);
     }
 
+
+
     return NULL; // Return NULL to satisfy pthread_create requirements
 }
 
@@ -352,7 +356,7 @@ int main(int argc,char *argv[]) {
         strcpy(arg->in_path, in_path);
         strcpy(arg->out_path, out_path);
         strcpy(arg->dir_name, dir_name);
-        
+        arg->dir=dir;
 
         // Create thread to process the file
         if (pthread_create(&threads[thread_count], NULL, processFiles, (void *)arg) != 0) {
