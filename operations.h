@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include "constants.h"
 
-
 int mywrite(int fd, char *buffer);
 /// Initializes the KVS state.
 /// @return 0 if the KVS state was initialized successfully, 1 otherwise.

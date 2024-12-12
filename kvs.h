@@ -15,7 +15,12 @@ typedef struct KeyNode {
 typedef struct HashTable {
     KeyNode *table[TABLE_SIZE];
     pthread_rwlock_t locks[TABLE_SIZE];
+
 } HashTable;
+
+
+int hash(const char *key); 
+
 
 /// Creates a new event hash table.
 /// @return Newly created hash table, NULL on failure

@@ -301,8 +301,6 @@ void *processFiles(void *arg) {
         readFilesLines(fd_in, fd_out, dir_name, entry, in_path, out_path);
     }
 
-
-
     return NULL; // Return NULL to satisfy pthread_create requirements
 }
 
@@ -364,12 +362,16 @@ int main(int argc,char *argv[]) {
         free(arg); // Free argument if thread creation fails
         continue;
     }
-
-
         thread_count++;
-
 }
 
+
+  // Join all successfully created threads
+  for (int i = 0; i < thread_count; i++) {
+      if (pthread_join(threads[i], NULL) != 0) {
+          fprintf(stderr, "Error joining thread %d\n", i);
+      }
+  }
   closedir(dir);
   kvs_terminate();
 

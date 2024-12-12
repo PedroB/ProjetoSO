@@ -4,6 +4,6 @@ WRITE [(a,anna)(b,bernardo)]
 WRITE [(d,dinis)(c,carlota)]
 READ [x,z,l,v]
 SHOW
-DELETE [c]
+#DELETE [c]
 READ [c]
 SHOW

@@ -6,3 +6,5 @@
 #define MAX_JOB_FILES 30
 #define MAX_PIPE 1024
 #define MAX_THREADS 10
+#define READ 0
+#define WRITE 1

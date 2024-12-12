@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <stdbool.h>
 
 #include "kvs.h"
 #include "constants.h"
@@ -94,6 +95,11 @@ int kvs_terminate() {
     return 1;
   }
 
+  //destroy all the locks
+  for(int i = 0; i < TABLE_SIZE; i++) {
+      pthread_rwlock_destroy(&kvs_table->locks[i]);
+    }
+
   free_table(kvs_table);
   return 0;
 }
@@ -163,6 +169,57 @@ void order_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MA
 //   }
 // }
 
+void lock_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE], int mode) {
+
+  int index;
+  bool boolean_locks[TABLE_SIZE] = {false}; // All elements will be initialized to false
+  
+  //filter duplicates while filling the boolean_locks
+  for(size_t i = 0; i < num_pairs; i++) {
+
+    index = hash(keys[i]);
+    if (boolean_locks[index] == false) {
+      boolean_locks[index] = true;
+    }
+  }
+
+  for(int i = 0; i < TABLE_SIZE; i++) {
+
+    if (boolean_locks[i] == true) {
+      if(mode == READ) {
+        pthread_rwlock_rdlock(&kvs_table->locks[i]);
+
+      } else if(mode == WRITE) {
+        pthread_rwlock_wrlock(&kvs_table->locks[i]);
+      }
+    }
+  }
+
+}
+
+void unlock_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
+
+  int index;
+  bool boolean_locks[TABLE_SIZE] = {false}; // All elements will be initialized to false
+  
+  //filter duplicates while filling the boolean_locks
+  for(size_t i = 0; i < num_pairs; i++) {
+
+    index = hash(keys[i]);
+    if (boolean_locks[index] == false) {
+      boolean_locks[index] = true;
+    }
+  }
+
+  for(int i = 0; i < TABLE_SIZE; i++) {
+
+    if (boolean_locks[i] == true) {
+      pthread_rwlock_unlock(&kvs_table->locks[i]);
+    }
+  }
+
+}
+
 // void unlock_keys(size_t num_pairs, char **keys) {
 //   for (int i = 0; i < TABLE_SIZE; i++) {
 //     KeyNode *keyNode = kvs_table->table[i];
@@ -185,10 +242,10 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
   }
 
   order_keys(num_pairs,keys,values);
+  lock_keys(num_pairs, keys, WRITE);
 
   for (size_t i = 0; i < num_pairs; i++) {
 
-//lock
 
     if (write_pair(kvs_table, keys[i], values[i]) != 0) {
       fprintf(stderr, "Failed to write keypair (%s,%s)\n", keys[i], values[i]);
@@ -196,7 +253,6 @@ int kvs_write(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MAX_
   }
 
   unlock_keys(num_pairs,keys);
-  
   
 
   return 0;
@@ -211,6 +267,7 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   char values[MAX_STRING_SIZE][MAX_STRING_SIZE] = {};
 
   order_keys(num_pairs,keys,values);
+  lock_keys(num_pairs, keys, READ);
 
   
   char buffer[MAX_PIPE];                          
@@ -242,8 +299,6 @@ int kvs_read(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
  unlock_keys(num_pairs,keys);
 
-    
-
   return 0;
 }
 
@@ -259,6 +314,7 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
   char values[MAX_STRING_SIZE][MAX_STRING_SIZE] = {};
   order_keys(num_pairs, keys, values);
 
+  lock_keys(num_pairs, keys, WRITE);
 
   int aux = 0;
 
@@ -285,12 +341,20 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 
   }
 
-  // unlock_keys(num_pairs,keys);
+  unlock_keys(num_pairs,keys);
 
   return 0;
 }
 
 void kvs_show(int fd) {
+
+
+  // lock the whole table
+  for(int i = 0; i < TABLE_SIZE; i++) {
+      pthread_rwlock_rdlock(&kvs_table->locks[i]);
+    }
+
+
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
   
@@ -304,13 +368,18 @@ void kvs_show(int fd) {
     }
   }
 
-  for (int i = 0; i < TABLE_SIZE; i++) {
-    KeyNode *keyNode = kvs_table->table[i];
-    while (keyNode != NULL) {
+  // for (int i = 0; i < TABLE_SIZE; i++) {
+  //   KeyNode *keyNode = kvs_table->table[i];
+  //   while (keyNode != NULL) {
         
 
-    }
-      keyNode = keyNode->next; // Move to the next node
+  //   }
+  //     keyNode = keyNode->next; // Move to the next node
+  //   }
+
+  // unlock the whole table
+  for(int i = 0; i < TABLE_SIZE; i++) {
+      pthread_rwlock_unlock(&kvs_table->locks[i]);
     }
 
   }
@@ -389,7 +458,7 @@ int gen_path_backup(char* dir_name, struct dirent* entry, char *in_path, char *o
         if (pid == 0) {
 
           if (backup_count == -1) {
-              return 1; 
+             exit(1);  
           }
 
           snprintf(out_path, MAX_JOB_FILE_NAME_SIZE, "%s/%.*s-%d.bck",
@@ -400,7 +469,7 @@ int gen_path_backup(char* dir_name, struct dirent* entry, char *in_path, char *o
           
           if (out_fd == -1) {
               perror("Failed to open output file");
-              return 1;
+              exit(1);
           }
 
         kvs_show(out_fd);

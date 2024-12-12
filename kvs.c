@@ -26,29 +26,26 @@ struct HashTable* create_hash_table() {
       ht->table[i] = NULL;
   }
 
+    // pthread_rwlock_init(&ht->table_lock, NULL);
 
-    // Initialize each KeyNode with a lock
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        ht->table[i] = malloc(sizeof(KeyNode));
-        if (!ht->table[i]) {
-            return NULL; // Memory allocation failure
-        }
-        ht->table[i]->key = NULL; // Initialize key and value pointers to NULL
-        ht->table[i]->value = NULL;
-        ht->table[i]->next = NULL;
+
+    // // Initialize each KeyNode with a lock
+    // for (int i = 0; i < TABLE_SIZE; i++) {
+    //     ht->table[i] = malloc(sizeof(KeyNode));
+    //     if (!ht->table[i]) {
+    //         return NULL; // Memory allocation failure
+    //     }
+    //     ht->table[i]->key = NULL; // Initialize key and value pointers to NULL
+    //     ht->table[i]->value = NULL;
+    //     ht->table[i]->next = NULL;
         
-    }
-
-
+    // }
   return ht;
 }
 
 int write_pair(HashTable *ht, const char *key, const char *value) {
     int index = hash(key);
     KeyNode *keyNode = ht->table[index];
-    
-    pthread_rwlock_wrlock(&ht->lock[index]);
-
 
     // pthread_rwlock_wrlock(&keyNode->lock);
     // Search for the key node
@@ -57,7 +54,7 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
 
         if (strcmp(keyNode->key, key) == 0) {
             free(keyNode->value);
-            pthread_rwlock_unlock(&ht->lock[index]);
+            // pthread_rwlock_unlock(&ht->locks[index]);
 
             keyNode->value = strdup(value);
             return 0;
@@ -65,14 +62,11 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
         keyNode = keyNode->next; // Move to the next node
     }
 
-
     // Key not found, create a new key node
     keyNode = malloc(sizeof(KeyNode));
     keyNode->key = strdup(key); // Allocate memory for the key
     keyNode->value = strdup(value); // Allocate memory for the value
     keyNode->next = ht->table[index]; // Link to existing nodes
-
-
 
 
     ht->table[index] = keyNode; // Place new key node at the start of the list
@@ -86,7 +80,6 @@ char* read_pair(HashTable *ht, const char *key) {
     KeyNode *keyNode = ht->table[index];
     char* value;
 
-    
     while (keyNode != NULL) {
         if (strcmp(keyNode->key, key) == 0) {
             value = strdup(keyNode->value);
@@ -105,6 +98,9 @@ int delete_pair(HashTable *ht, const char *key) {
 
     // Search for the key node
     while (keyNode != NULL) {
+        if(keyNode->key == NULL) {
+            return 1;
+        }
         if (strcmp(keyNode->key, key) == 0) {
             // Key found; delete this node
             if (prevNode == NULL) {
