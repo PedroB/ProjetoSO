@@ -150,19 +150,18 @@ void order_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE], char values[][MA
 // }
 
 
-void unlock_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
-  for (int i = 0; i < TABLE_SIZE; i++) {
-    KeyNode *keyNode = kvs_table->table[i];
-    while (keyNode != NULL) {
-      for (size_t j = 0; j < num_pairs; j++) {
-        if (strcmp(keyNode->key, keys[j]) == 0) { // Compare strings correctly
-          pthread_rwlock_unlock(&keyNode->lock); // Unlock the correct lock
-        }
-      }
-      keyNode = keyNode->next; // Move to the next node
-    }
-  }
-}
+// void unlock_keys(size_t num_pairs, char keys[][MAX_STRING_SIZE]) {
+//   for (int i = 0; i < TABLE_SIZE; i++) {
+//     KeyNode *keyNode = kvs_table->table[i];
+//     while (keyNode != NULL) {
+//       for (size_t j = 0; j < num_pairs; j++) {
+//         if (strcmp(keyNode->key, keys[j]) == 0) { // Compare strings correctly
+//         }
+//       }
+//       keyNode = keyNode->next; // Move to the next node
+//     }
+//   }
+// }
 
 // void unlock_keys(size_t num_pairs, char **keys) {
 //   for (int i = 0; i < TABLE_SIZE; i++) {
@@ -294,7 +293,7 @@ int kvs_delete(size_t num_pairs, char keys[][MAX_STRING_SIZE], int fd) {
 void kvs_show(int fd) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
-    pthread_rwlock_rdlock(&keyNode->lock);
+  
     while (keyNode != NULL) {
 
       char buffer[MAX_PIPE];                          
@@ -308,7 +307,7 @@ void kvs_show(int fd) {
   for (int i = 0; i < TABLE_SIZE; i++) {
     KeyNode *keyNode = kvs_table->table[i];
     while (keyNode != NULL) {
-        pthread_rwlock_unlock(&keyNode->lock);
+        
 
     }
       keyNode = keyNode->next; // Move to the next node

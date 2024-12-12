@@ -10,11 +10,11 @@ typedef struct KeyNode {
     char *key;
     char *value;
     struct KeyNode *next;
-    pthread_rwlock_t lock;
 } KeyNode;
 
 typedef struct HashTable {
     KeyNode *table[TABLE_SIZE];
+    pthread_rwlock_t locks[TABLE_SIZE];
 } HashTable;
 
 /// Creates a new event hash table.
