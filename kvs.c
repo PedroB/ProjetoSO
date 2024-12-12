@@ -25,21 +25,6 @@ struct HashTable* create_hash_table() {
   for (int i = 0; i < TABLE_SIZE; i++) {
       ht->table[i] = NULL;
   }
-
-    // pthread_rwlock_init(&ht->table_lock, NULL);
-
-
-    // // Initialize each KeyNode with a lock
-    // for (int i = 0; i < TABLE_SIZE; i++) {
-    //     ht->table[i] = malloc(sizeof(KeyNode));
-    //     if (!ht->table[i]) {
-    //         return NULL; // Memory allocation failure
-    //     }
-    //     ht->table[i]->key = NULL; // Initialize key and value pointers to NULL
-    //     ht->table[i]->value = NULL;
-    //     ht->table[i]->next = NULL;
-        
-    // }
   return ht;
 }
 
@@ -47,11 +32,9 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
     int index = hash(key);
     KeyNode *keyNode = ht->table[index];
 
-    // pthread_rwlock_wrlock(&keyNode->lock);
     // Search for the key node
     while (keyNode != NULL) {
         
-
         if (strcmp(keyNode->key, key) == 0) {
             free(keyNode->value);
             // pthread_rwlock_unlock(&ht->locks[index]);
@@ -68,9 +51,7 @@ int write_pair(HashTable *ht, const char *key, const char *value) {
     keyNode->value = strdup(value); // Allocate memory for the value
     keyNode->next = ht->table[index]; // Link to existing nodes
 
-
     ht->table[index] = keyNode; // Place new key node at the start of the list
-
     
     return 0;
 }
@@ -94,7 +75,6 @@ int delete_pair(HashTable *ht, const char *key) {
     int index = hash(key);
     KeyNode *keyNode = ht->table[index];
     KeyNode *prevNode = NULL;
-
 
     // Search for the key node
     while (keyNode != NULL) {
@@ -121,8 +101,6 @@ int delete_pair(HashTable *ht, const char *key) {
         prevNode = keyNode; // Move prevNode to current node
         keyNode = keyNode->next; // Move to the next node
     }
-    
-
     
     return 1;
 }

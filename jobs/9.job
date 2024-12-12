@@ -2,9 +2,3 @@
 WRITE [(ola,adeus)(adeus,ola)]
 BACKUP
 SHOW
-WRITE [(nes,1)(nes2,2)(nes3,3)]
-BACKUP
-SHOW
-DELETE [nes]
-BACKUP
-SHOW

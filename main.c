@@ -11,14 +11,6 @@
 #include "parser.h"
 #include "operations.h"
 
-/*
-struct ThreadArgs {
-    char file[BUFFER_SIZE];
-    int thread_id;
-    int BARRIER_ATIVO;
-};
-*/
-
 // Structure to hold arguments for thread function
 typedef struct {
     char in_path[MAX_JOB_FILE_NAME_SIZE];
@@ -31,20 +23,10 @@ typedef struct {
   
 } ThreadArg;
 
-
 int backup_counter_files = 0;
 int simultaneous_backups = 0;
 
   void readFilesLines(int fd_in, int fd_out, char* dir_name, struct dirent* entry, char *in_path, char *out_path){ 
-  // struct ThreadArgs *threadArgs = (struct ThreadArgs *)args;
-  // int BARRIER = threadArgs->BARRIER_ATIVO;
-  //   int fd = 0;
-  //   if (BARRIER == 0){
-  //     fd = open(threadArgs->file, O_RDONLY);
-  //   }
-  /* replaced by this*/
-
-  // int BARRIER = threadArgs->BARRIER_ATIVO;
 
   while (1) {
     char keys[MAX_WRITE_SIZE][MAX_STRING_SIZE] = {0};
@@ -111,7 +93,6 @@ int simultaneous_backups = 0;
         }
 
         if (delay > 0) {
-          // printf("Waiting...\n");
 
           sprintf(buffer, "%s\n", "Waiting...\n");
           mywrite(fd_out, buffer);
@@ -133,16 +114,6 @@ int simultaneous_backups = 0;
         break;
 
       case CMD_HELP:
-        // printf( 
-        //     "Available commands:\n"
-        //     "  WRITE [(key,value)(key2,value2),...]\n"
-        //     "  READ [key,key2,...]\n"
-        //     "  DELETE [key,key2,...]\n"
-        //     "  SHOW\n"
-        //     "  WAIT <delay_ms>\n"
-        //     "  BACKUP\n" // Not implemented
-        //     "  HELP\n"
-        // );
       
         sprintf(buffer,  "Available commands:\n"
             "  WRITE [(key,value)(key2,value2),...]\n"
@@ -165,83 +136,6 @@ int simultaneous_backups = 0;
   }
   }
   }
-
-
-
-// int gen_path(char* dir_name, struct dirent* entry, char *in_path, char *out_path) {
-//     if (!dir_name || !entry || !in_path || !out_path) {
-//         return 1; 
-//     }
-//     // Check the total length of dir_name and entry->d_name
-//     size_t dir_len = strlen(dir_name);
-//     size_t file_len = strlen(entry->d_name);
-
-//     // Ensure the combined path fits within MAX_JOB_FILE_NAME_SIZE
-//     if (dir_len + 1 + file_len + 1 > MAX_JOB_FILE_NAME_SIZE) {
-//         fprintf(stderr, "Error: Combined path length exceeds MAX_JOB_FILE_NAME_SIZE.\n");
-//         return 1;
-//     }
-
-//     // Copy directory name to in_path
-//     strncpy(in_path, dir_name, MAX_JOB_FILE_NAME_SIZE - 1);
-//     in_path[MAX_JOB_FILE_NAME_SIZE - 1] = '\0';  // Ensure null termination
-
-//     // Append '/' and entry->d_name
-//     strncat(in_path, "/", MAX_JOB_FILE_NAME_SIZE - strlen(in_path) - 1);
-//     strncat(in_path, entry->d_name, MAX_JOB_FILE_NAME_SIZE - strlen(in_path) - 1);
-
-//   char *ptr_to_dot = strrchr(entry->d_name, '.');
-//     if (ptr_to_dot && strcmp(ptr_to_dot, ".job") == 0) {
-//         // Create output file path
-//         snprintf(out_path, MAX_JOB_FILE_NAME_SIZE, "%s/%.*s.out", 
-//                  dir_name, (int)(ptr_to_dot - entry->d_name), entry->d_name);
-
-//         // Call readFilesLines and redirect output to .out file
-//         int out_fd = open(out_path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-//         if (out_fd == -1) {
-//             perror("Failed to open output file");
-//             return 1;
-//         }
-
-//         // Redirect stdout to the output file
-//         int saved_stdout = dup(STDOUT_FILENO);
-//         dup2(out_fd, STDOUT_FILENO);
-//         close(out_fd);
-
-//         // Process the file
-//         readFilesLines(in_path);
-
-//         // Restore stdout
-//         fflush(stdout);
-//         dup2(saved_stdout, STDOUT_FILENO);
-//         close(saved_stdout);
-//     }
-//     return 0;
-// }
-
-
-// int redirect_and_process_file(int out_fd, char * in_path) {
-
-//         // Redirect stdout to the output file
-//         int saved_stdout = dup(STDOUT_FILENO);
-//         dup2(out_fd, STDOUT_FILENO);
-//         close(out_fd);
-
-//         // Process the file
-//         readFilesLines(in_path);
-
-//         //COPIAR A TABELA KVS PARA O FICHEIRO DE BACKUP
-
-//         // Restore stdout
-//         fflush(stdout);
-//         dup2(saved_stdout, STDOUT_FILENO);
-//         close(saved_stdout);
-//         return 0;
-
-//     }
-
-
-
 
 int gen_path(char* dir_name, struct dirent* entry, char *in_path, char *out_path) {
     if (!dir_name || !entry || !in_path || !out_path) {
@@ -318,7 +212,6 @@ int main(int argc,char *argv[]) {
     }
 
   if(dir == NULL){
-    // printf("Cannot open filename '%s'\n",dir_name);
     fprintf(stderr, "Cannot open filename '%s'\n",dir_name);
 
     return 1;
@@ -330,14 +223,6 @@ int main(int argc,char *argv[]) {
     return 1;
   }
 
-  // // count number of job files to later iterate over them to access their specific number of backups
-  //  while ((entry = readdir(dir)) != NULL) {
-  //       // Ignore "." and ".." entries
-  //       if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
-  //           backup_tracker_size++;
-  //       }
-  //   }
- 
     pthread_t threads[MAX_THREADS];
     int thread_count = 0;
 
@@ -376,7 +261,5 @@ int main(int argc,char *argv[]) {
   kvs_terminate();
 
   return 0;
-  
-  
 }
 
